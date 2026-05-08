@@ -1,0 +1,17 @@
+# Git
+.git/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Daily trading logs - local data, should not be committed
+logs/*.md
+!logs/.gitkeep
+
+# Temporary files
+*.tmp
+*.log
+
+# OpenClaw specific (local to each installation)
+*.local.*

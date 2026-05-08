@@ -3,17 +3,32 @@
 import smtplib
 import sys
 import os
+from pathlib import Path
 
 # 邮件配置
 SMTP_HOST = "smtp.sina.com"
 SMTP_PORT = 587
 EMAIL_FROM = "loongsoncloud@sina.com"
-AUTH_CODE = "b2b1af13b41813b0"
 EMAIL_TO = "loongsoncloud@sina.com"  # 发送给自己
+
+def load_auth_code():
+    """从 secrets 文件加载授权码"""
+    secrets_file = Path.home() / ".openclaw" / "secrets" / "mail_creds"
+    if secrets_file.exists():
+        with open(secrets_file, "r") as f:
+            for line in f:
+                if line.startswith("MAIL_APP_KEY="):
+                    return line.split("=", 1)[1].strip()
+    # 如果 secrets 文件不存在，使用环境变量
+    auth_code = os.environ.get("MAIL_APP_KEY", "")
+    if not auth_code:
+        raise RuntimeError("未找到邮件授权码，请检查 ~/.openclaw/secrets/mail_creds 或设置 MAIL_APP_KEY 环境变量")
+    return auth_code
 
 def send_email(subject: str, body: str) -> bool:
     """发送邮件"""
     try:
+        auth_code = load_auth_code()
         msg = f"From: {EMAIL_FROM}\r\n"
         msg += f"To: {EMAIL_TO}\r\n"
         msg += f"Subject: {subject}\r\n"
@@ -23,7 +38,7 @@ def send_email(subject: str, body: str) -> bool:
 
         server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
         server.starttls()
-        server.login(EMAIL_FROM, AUTH_CODE)
+        server.login(EMAIL_FROM, auth_code)
         server.sendmail(EMAIL_FROM, [EMAIL_TO], msg.encode("utf-8"))
         server.quit()
         print(f"邮件发送成功: {subject}")
