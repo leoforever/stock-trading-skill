@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """发送邮件报告到老板邮箱"""
 import smtplib
+import ssl
 import sys
 import os
 from pathlib import Path
 
 # 邮件配置
 SMTP_HOST = "smtp.sina.com"
-SMTP_PORT = 587
+SMTP_PORT = 465  # 465 = SSL, 587 = STARTTLS (not supported by Sina)
 EMAIL_FROM = "loongsoncloud@sina.com"
 EMAIL_TO = "loongsoncloud@sina.com"  # 发送给自己
 
@@ -36,8 +37,12 @@ def send_email(subject: str, body: str) -> bool:
         msg += "\r\n"
         msg += body
 
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ssl.create_default_context(), timeout=30)
+        else:
+            server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30)
+            if server.has_extn('STARTTLS'):
+                server.starttls()
         server.login(EMAIL_FROM, auth_code)
         server.sendmail(EMAIL_FROM, [EMAIL_TO], msg.encode("utf-8"))
         server.quit()
