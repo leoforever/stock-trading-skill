@@ -30,12 +30,37 @@ def send_email(subject: str, body: str) -> bool:
     """发送邮件"""
     try:
         auth_code = load_auth_code()
+        # 简单的 Markdown → Plain Text 转换
+        import re
+        plain = body
+        # 去掉表格的|和-，保留内容
+        plain = re.sub(r'\|\s*', '  ', plain)  # | 换成空格
+        plain = re.sub(r'\s*\|', '  ', plain)
+        plain = re.sub(r'^\|.*\|$', '', plain, flags=re.MULTILINE)  # 删除表格分隔行
+        plain = re.sub(r'^\s*\|', '', plain, flags=re.MULTILINE)  # 去掉行首的|
+        plain = re.sub(r'\|\s*$', '', plain, flags=re.MULTILINE)  # 去掉行尾的|
+        # 去掉 Markdown 标题标记
+        plain = re.sub(r'^#{1,6}\s+', '', plain, flags=re.MULTILINE)
+        # **加粗** → 加粗（保留文字）
+        plain = re.sub(r'\*\*(.+?)\*\*', r'\1', plain)
+        # *斜体* → 斜体（保留文字）
+        plain = re.sub(r'\*(.+?)\*', r'\1', plain)
+        # `行内代码` → 保留内容
+        plain = re.sub(r'`(.+?)`', r'\1', plain)
+        # ```代码块``` → 去掉
+        plain = re.sub(r'```.*?```', '', plain, flags=re.DOTALL)
+        # --- 分隔线 → 换行
+        plain = re.sub(r'^---+$', '', plain, flags=re.MULTILINE)
+        # 合并多个空行为单个换行
+        plain = re.sub(r'\n{3,}', '\n\n', plain)
+        # 保留标题行（已去掉#）
+
         msg = f"From: {EMAIL_FROM}\r\n"
         msg += f"To: {EMAIL_TO}\r\n"
         msg += f"Subject: {subject}\r\n"
         msg += "Content-Type: text/plain; charset=utf-8\r\n"
         msg += "\r\n"
-        msg += body
+        msg += plain
 
         if SMTP_PORT == 465:
             server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ssl.create_default_context(), timeout=30)
